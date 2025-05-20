@@ -1,6 +1,14 @@
 from fastapi import FastAPI, Query, Request, Path, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from sqalchemy import create_engine, Column, Integer, String
+from sqalchemy.orm import sessiomaker, declrative_base, Session, Depends
+
+DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessiomaker(autocommit= False, autoflush=False, bind=engine)
+
 
 app = FastAPI()
 
@@ -34,6 +42,30 @@ applications_db = {}
 #     else:
 #         return {"message": "Here are all of your applications"}
         
+
+# creating a db connections session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@app.get("/jobs")
+def get_all_job_postings(db: Session = Depends(get_db)):
+    result = db.execute("""SELECT * FROM jobPosting""")
+
+    rows = result.fetchall()
+
+    output = []
+    for row in rows:
+        output.append(str(dict(row._mapping)))
+    
+    return output
+
+
+
 
 class Application(BaseModel):
     candidate_id: str
